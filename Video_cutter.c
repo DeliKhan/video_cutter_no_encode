@@ -104,7 +104,7 @@ int create_video(long double *iframe, char *file_directory, char *destination_pa
 {
     char command[500];
     if (*iframe > 180) {
-        char command[500] = "ffmpeg -ss ";
+        char command[500] = "ffmpeg -y -ss ";
         char seek[50];
         sprintf(seek, "%Lf", *iframe-180);
         strcat(command, seek);
@@ -126,10 +126,9 @@ int create_video(long double *iframe, char *file_directory, char *destination_pa
         sprintf(num, "%" PRIu8, *i);
         strcat(command, num);
         strcat(command, ".mp4");
-        printf("%s", command);
     }
     else {
-        char command[500] = "ffmpeg -i '";
+        char command[500] = "ffmpeg -y -i '";
         strcat(command, file_directory);
         strcat(command, "'");
         strcat(command, " -ss ");
