@@ -4,7 +4,7 @@
 #include <string.h>   //using this to extract time information
 #include <stdlib.h>   // for using free
 
-void get_input(char *file_directory, char *destination_path, char *start_time, char *end_time)
+void get_input(char *file_directory, char **destination_path, char *start_time, char *end_time)
 {
     printf("Type path to input video file");
     fgets(file_directory, 100, stdin);
@@ -25,13 +25,15 @@ void get_input(char *file_directory, char *destination_path, char *start_time, c
     char *slash_directory = strrchr(file_directory,'/');
     int index = (int) (slash_directory-file_directory);
     index++;
-    destination_path = strndup(file_directory,index);
+    *destination_path = strndup(file_directory,index);
 }
 void extracting_time(char *time, uint64_t *start_time_sec) // converts HH:MM:SS to {HH, MM, SS}
 {
     const char delimiter[2] = ":";
     uint8_t timings[3];
-    char *token = strtok(time, delimiter);
+    char copy_time[10];
+    strcpy(copy_time, time);
+    char *token = strtok(copy_time, delimiter);
     uint8_t i = 0;
     while (token)
     {
@@ -98,23 +100,53 @@ int get_iframes(uint64_t *start_time_sec, long double *iframes, char *file_direc
     }
 }
 
-int create_video(long double *iframe, char *file_directory, char *end_time, uint8_t *i)
+int create_video(long double *iframe, char *file_directory, char *destination_path, char *end_time, uint64_t *end_time_sec, uint8_t *i)
 {
-    char command[500] = "ffmpeg -i '";
-    strcat(command, file_directory);
-    strcat(command, "'");
-    strcat(command, " -ss ");
-    char start_time[50];
-    char num[5];
-    sprintf(start_time, "%Lf", *iframe);
-    strcat(command, start_time);
-    strcat(command, " -to ");
-    strcat(command, end_time);
-    strcat(command, " -c copy output");
-    sprintf(num, "%" PRIu8, *i);
-    strcat(command, num);
-    strcat(command, ".mp4");
-    printf("%s", command);
+    char command[500];
+    if (*iframe > 180) {
+        char command[500] = "ffmpeg -ss ";
+        char seek[50];
+        sprintf(seek, "%Lf", *iframe-180);
+        strcat(command, seek);
+        strcat(command, " -i '");
+        strcat(command, file_directory);
+        strcat(command, "'");
+        strcat(command, " -ss ");
+        char short_start_time[50];
+        char short_end_time[50];
+        char num[5];
+        sprintf(short_start_time, "%d", 180);
+        strcat(command, short_start_time);
+        strcat(command, " -to ");
+        sprintf(short_end_time, "%ld", *end_time_sec + 180);
+        strcat(command, short_end_time);
+        strcat(command, " -c copy ");
+        strcat(command, destination_path);
+        strcat(command, "output");
+        sprintf(num, "%" PRIu8, *i);
+        strcat(command, num);
+        strcat(command, ".mp4");
+        printf("%s", command);
+    }
+    else {
+        char command[500] = "ffmpeg -i '";
+        strcat(command, file_directory);
+        strcat(command, "'");
+        strcat(command, " -ss ");
+        char start_time[50];
+        char num[5];
+        sprintf(start_time, "%Lf", *iframe);
+        strcat(command, start_time);
+        strcat(command, " -to ");
+        strcat(command, end_time);
+        strcat(command, " -c copy ");
+        strcat(command, destination_path);
+        strcat(command, "output");
+        sprintf(num, "%" PRIu8, *i);
+        strcat(command, num);
+        strcat(command, ".mp4");
+        printf("%s", command);
+    }
     char line[200];
     size_t chunks;
     FILE *process;
@@ -133,6 +165,7 @@ int main() // gets all user input and executes the other functions
     char start_time[10] = {'\0'};
     char end_time[10] = {'\0'};
     uint64_t start_time_sec = 0.0;
+    uint64_t end_time_sec = 0.0;
     uint8_t counter = 0;
     long double *iframes = malloc(10000 * sizeof(long double));
     if (iframes == NULL)
@@ -140,11 +173,12 @@ int main() // gets all user input and executes the other functions
         printf(" Memory allocation failed. Exiting the program .\n");
         return 1;
     }
-    get_input(file_directory, destination_path, start_time, end_time);
+    get_input(file_directory, &destination_path, start_time, end_time);
     extracting_time(start_time, &start_time_sec);
+    extracting_time(end_time,&end_time_sec);
     get_iframes(&start_time_sec, iframes, file_directory, &counter);
     for (uint8_t i = 0; i < counter; i++)
     {
-        create_video(&iframes[i], file_directory, end_time, &i);
+        create_video(&iframes[i], file_directory, destination_path, end_time, &end_time_sec, &i);
     }
 }
