@@ -118,7 +118,7 @@ int create_video(long double *iframe, char *file_directory, char *destination_pa
         sprintf(short_start_time, "%d", 180);
         strcat(command, short_start_time);
         strcat(command, " -to ");
-        sprintf(short_end_time, "%ld", *end_time_sec + 180);
+        sprintf(short_end_time, "%Lf", *end_time_sec - (*iframe-180));
         strcat(command, short_end_time);
         strcat(command, " -c copy ");
         strcat(command, destination_path);
