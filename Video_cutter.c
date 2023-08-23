@@ -104,7 +104,7 @@ int create_video(long double *iframe, char *file_directory, char *destination_pa
 {
     char command[500];
     if (*iframe > 180) {
-        char command[500] = "ffmpeg -y -ss ";
+        char command[500] = "ffmpeg -hide_banner -loglevel error -y -ss ";
         char seek[50];
         sprintf(seek, "%Lf", *iframe-180);
         strcat(command, seek);
@@ -128,7 +128,7 @@ int create_video(long double *iframe, char *file_directory, char *destination_pa
         strcat(command, ".mp4");
     }
     else {
-        char command[500] = "ffmpeg -y -i '";
+        char command[500] = "ffmpeg -hide_banner -loglevel error -y -i '";
         strcat(command, file_directory);
         strcat(command, "'");
         strcat(command, " -ss ");
@@ -144,7 +144,6 @@ int create_video(long double *iframe, char *file_directory, char *destination_pa
         sprintf(num, "%" PRIu8, *i);
         strcat(command, num);
         strcat(command, ".mp4");
-        printf("%s", command);
     }
     char line[200];
     size_t chunks;
@@ -176,8 +175,15 @@ int main() // gets all user input and executes the other functions
     extracting_time(start_time, &start_time_sec);
     extracting_time(end_time,&end_time_sec);
     get_iframes(&start_time_sec, iframes, file_directory, &counter);
-    for (uint8_t i = 0; i < counter; i++)
+    int thread_id, nloops;
+#pragma omp parallel private(thread_id, nloops)
     {
-        create_video(&iframes[i], file_directory, destination_path, end_time, &end_time_sec, &i);
+        nloops = 0;
+#pragma omp for
+        for (uint8_t i = 0; i < counter; i++)
+            {
+                create_video(&iframes[i], file_directory, destination_path, end_time, &end_time_sec, &i);
+                ++nloops;
+            }
     }
 }
